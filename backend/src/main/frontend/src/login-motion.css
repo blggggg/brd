@@ -1,0 +1,366 @@
+/* BRD 动态壁纸登录页 - 最终布局 */
+
+main.login {
+    position: relative !important;
+    display: block !important;
+    width: 100% !important;
+    min-height: 100dvh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #080d20 !important;
+    isolation: isolate;
+}
+
+/* 动态壁纸 */
+main.login > .login-video {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    object-fit: cover !important;
+    object-position: center;
+    z-index: -1 !important;
+    pointer-events: none;
+}
+
+/* 登录页 */
+main.login #brd-login-motion {
+    width: 100% !important;
+    min-height: 100dvh !important;
+    background: transparent !important;
+}
+
+/* 主布局 */
+#brd-login-motion .b-page {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    width: 100% !important;
+    min-height: 100dvh !important;
+    padding: 30px clamp(24px, 5vw, 100px) !important;
+    margin: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+}
+
+/* 隐藏原展示区 */
+#brd-login-motion .b-story {
+    display: none !important;
+}
+
+/* 超大登录卡片 */
+#brd-login-motion .b-login {
+    display: flex !important;
+    flex: 0 1 820px !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+
+    width: min(820px, 100%) !important;
+    max-width: 100% !important;
+    min-height: 800px !important;
+    padding: 70px 85px !important;
+    margin: 0 !important;
+
+    background: rgba(12, 18, 42, 0.58) !important;
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+
+    border: 1px solid rgba(190, 205, 255, 0.25);
+    border-radius: 26px;
+
+    box-shadow: 0 20px 70px rgba(0, 0, 0, 0.4);
+}
+
+/* 解除表单宽度限制 */
+#brd-login-motion .b-form-wrap {
+    width: 100% !important;
+    max-width: none !important;
+    margin: auto !important;
+}
+
+/* 文字 */
+#brd-login-motion .b-login h2 {
+    font-size: 52px !important;
+    color: white !important;
+}
+
+#brd-login-motion .b-greeting {
+    font-size: 20px !important;
+    color: #98baff !important;
+}
+
+#brd-login-motion .b-sub {
+    font-size: 22px !important;
+    color: #b9c6e4 !important;
+    margin-bottom: 48px !important;
+}
+
+#brd-login-motion .b-label {
+    font-size: 22px !important;
+    color: #e9eeff !important;
+    margin-bottom: 16px !important;
+}
+
+/* 输入框 */
+#brd-login-motion .b-field {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 86px !important;
+    min-height: 86px !important;
+    margin-bottom: 34px !important;
+    border-radius: 14px !important;
+    background: rgba(255, 255, 255, 0.09) !important;
+    border: 1px solid rgba(190, 205, 255, 0.3) !important;
+}
+
+#brd-login-motion .b-field input {
+    background: transparent;
+    border: 0;
+    margin: 0;
+    min-width: 0;
+    height: 86px !important;
+    width: 100% !important;
+    font-size: 24px !important;
+    padding: 20px 60px !important;
+    color: white !important;
+}
+
+#brd-login-motion .b-field input::placeholder {
+    color: #a5b3d0 !important;
+}
+
+/* 登录按钮 */
+#brd-login-motion .b-submit {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    height: 86px !important;
+    min-height: 86px !important;
+    font-size: 24px !important;
+    font-weight: 600 !important;
+    color: #fff !important;
+    background: linear-gradient(110deg, #3265ee, #785bdf) !important;
+    border-radius: 14px !important;
+}
+
+/* Local icons require no external CDN or runtime library. */
+#brd-login-motion .b-field > svg { position: absolute; left: 18px; width: 20px; height: 20px; color: #b9c6e4; pointer-events: none; }
+#brd-login-motion .b-eye { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; display: grid; place-items: center; padding: 0; background: transparent; border: 0; color: #b9c6e4; }
+#brd-login-motion .b-eye svg,#brd-login-motion .b-submit svg { width: 20px; height: 20px; }
+#brd-login-motion .b-bottom svg { width: 15px; height: 15px; vertical-align: -2px; margin-right: 5px; }
+#brd-login-motion .b-field:focus-within { outline: 2px solid #98baff; outline-offset: 3px; }
+#brd-login-motion .b-form-error { color: #ffb4bc; margin-top: 12px; }
+.login-motion-toggle { position: absolute; top: 14px; left: 14px; z-index: 2; color: #fff; background: #0c122acc; border: 1px solid #b9c6e466; min-height: 40px; border-radius: 20px; padding: 8px 14px; font-size: 12px; }
+.login-motion-toggle:hover { background: #26335b; color: #fff; }
+
+/* Fit the entire video on mobile; never crop it or cover it with the form. */
+@media (max-width: 900px) {
+    main.login > .login-video { position: relative !important; display: block; inset: auto !important; z-index: 0 !important; width: 100% !important; height: auto !important; object-fit: contain !important; background: #080d20; }
+    main.login #brd-login-motion { min-height: 0 !important; }
+    main.login #brd-login-motion .b-page { min-height: 0 !important; padding: 20px 16px 28px !important; }
+    #brd-login-motion .b-login { min-height: 0 !important; }
+}
+
+/* 底部说明 */
+#brd-login-motion .b-bottom {
+    font-size: 17px !important;
+    color: #b9c6e4 !important;
+    margin-top: 35px !important;
+}
+
+/* 小屏幕响应式 */
+@media (max-width: 900px) {
+    #brd-login-motion .b-page {
+        justify-content: center !important;
+        padding: 20px !important;
+    }
+
+    #brd-login-motion .b-login {
+        width: 100% !important;
+        min-height: auto !important;
+        padding: 40px 30px !important;
+    }
+
+    #brd-login-motion .b-login h2 {
+        font-size: 34px !important;
+    }
+
+    #brd-login-motion .b-sub {
+        font-size: 16px !important;
+    }
+
+    #brd-login-motion .b-label {
+        font-size: 16px !important;
+    }
+
+    #brd-login-motion .b-field,
+    #brd-login-motion .b-field input,
+    #brd-login-motion .b-submit {
+        height: 60px !important;
+        min-height: 60px !important;
+        font-size: 17px !important;
+    }
+}
+/* ========================================
+   BRD 手机端登录页面修复
+======================================== */
+
+@media screen and (max-width: 600px) {
+
+    html,
+    body,
+    #app {
+        margin: 0;
+        width: 100%;
+        min-height: 100%;
+        overflow-x: hidden;
+    }
+
+    main.login {
+        width: 100% !important;
+        min-height: 100dvh !important;
+        padding: 0 !important;
+        overflow-x: hidden !important;
+    }
+
+    #brd-login-motion .b-page {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+
+        width: 100% !important;
+        min-height: 100dvh !important;
+        padding: 20px 16px !important;
+    }
+
+    /* 登录卡片 */
+    #brd-login-motion .b-login {
+        flex: 0 1 auto !important;
+        width: 100% !important;
+        max-width: 440px !important;
+        min-height: 0 !important;
+        height: auto !important;
+
+        padding: 34px 24px !important;
+        margin: 0 auto !important;
+
+        border-radius: 22px !important;
+        background: rgba(12, 18, 42, 0.72) !important;
+    }
+
+    /* 表单容器 */
+    #brd-login-motion .b-form-wrap {
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+    }
+
+    /* 标题 */
+    #brd-login-motion .b-login h2 {
+        font-size: 28px !important;
+        line-height: 1.35 !important;
+        margin-bottom: 12px !important;
+    }
+
+    #brd-login-motion .b-greeting {
+        font-size: 13px !important;
+    }
+
+    #brd-login-motion .b-sub {
+        font-size: 14px !important;
+        line-height: 1.6 !important;
+        margin-bottom: 26px !important;
+    }
+
+    /* 输入框标签 */
+    #brd-login-motion .b-label {
+        font-size: 15px !important;
+        margin-bottom: 9px !important;
+    }
+
+    /* 输入框容器 */
+    #brd-login-motion .b-field {
+        display: flex !important;
+        align-items: center !important;
+        width: 100% !important;
+        height: 54px !important;
+        min-height: 54px !important;
+        margin-bottom: 20px !important;
+
+        background: rgba(255, 255, 255, 0.08) !important;
+        border-radius: 10px !important;
+    }
+
+    /* 输入框 */
+    #brd-login-motion .b-field input {
+        display: block !important;
+        width: 100% !important;
+        height: 100% !important;
+        min-height: 0 !important;
+
+        padding: 0 46px !important;
+        margin: 0 !important;
+
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+
+        color: #fff !important;
+        font-size: 16px !important;
+        line-height: normal !important;
+    }
+
+    #brd-login-motion .b-field input::placeholder {
+        color: #a5b3d0 !important;
+    }
+
+    /* 密码显示按钮 */
+    #brd-login-motion .b-eye {
+        position: absolute !important;
+        top: 50% !important;
+        right: 8px !important;
+        transform: translateY(-50%) !important;
+
+        width: 40px !important;
+        height: 40px !important;
+
+        display: grid !important;
+        place-items: center !important;
+
+        padding: 0 !important;
+        background: transparent !important;
+        color: #b9c6e4 !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    /* 登录按钮 */
+    #brd-login-motion .b-submit {
+        display: flex !important;
+        width: 100% !important;
+        height: 56px !important;
+        min-height: 56px !important;
+
+        align-items: center !important;
+        justify-content: center !important;
+
+        padding: 0 16px !important;
+        margin: 8px 0 0 !important;
+
+        font-size: 17px !important;
+        border-radius: 10px !important;
+    }
+
+    /* 底部提示 */
+    #brd-login-motion .b-bottom {
+        font-size: 12px !important;
+        line-height: 1.6 !important;
+        margin-top: 26px !important;
+    }
+}

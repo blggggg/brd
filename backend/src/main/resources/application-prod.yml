@@ -1,0 +1,18 @@
+server:
+  address: ${BRD_BIND:0.0.0.0}
+  servlet:
+    session:
+      cookie:
+        secure: true
+spring:
+  datasource:
+    url: ${BRD_DB_URL}
+    username: ${BRD_DB_USER}
+    password: ${BRD_DB_PASSWORD}
+  session:
+    jdbc:
+      initialize-schema: never
+  flyway:
+    enabled: false
+brd:
+  scanner: clamav
