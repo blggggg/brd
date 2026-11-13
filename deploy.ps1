@@ -54,12 +54,8 @@ if [ -n "`$old_pid" ]; then
 fi
 
 mv -f '$remoteTemp' '$remoteJar'
-nohup /usr/lib/jvm/java-17-openjdk-amd64/bin/java \
-  -jar '$remoteJar' \
-  --server.address=127.0.0.1 \
-  --server.port=8080 \
-  --server.forward-headers-strategy=framework \
-  > '$remoteDir/brd-management.log' 2>&1 < /dev/null &
+nohup '$remoteDir/start.sh' \
+  >> '$remoteDir/brd-management.log' 2>&1 < /dev/null &
 echo `$! > '$remoteDir/brd-management.pid'
 sleep 3
 if ! kill -0 `$(cat '$remoteDir/brd-management.pid') 2>/dev/null; then

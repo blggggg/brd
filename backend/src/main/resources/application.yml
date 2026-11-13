@@ -23,6 +23,11 @@ spring:
     enabled: true
 brd:
   storage: ${BRD_STORAGE:./data/files}
+  projects:
+    datasource:
+      url: ${BRD_PROJECT_DB_URL:jdbc:mysql://8.137.166.134:3306/BVLDB?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai}
+      username: ${BRD_PROJECT_DB_USER:root}
+      password: ${BRD_PROJECT_DB_PASSWORD:}
   # Set BRD_ADMIN_PASSWORD in the environment for a fresh installation.
   admin-password: ${BRD_ADMIN_PASSWORD:}
   scanner: ${BRD_SCANNER:structural}

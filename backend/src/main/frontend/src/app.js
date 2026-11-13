@@ -6,6 +6,7 @@ import {esc,same,code,canWrite,size,newUploadKey} from './helpers.js';
 const root=document.querySelector('#app'),modal=document.querySelector('#modal'),notice=document.querySelector('#notice');
 const roles={ADMIN:'管理员',UPLOADER:'上传者',READER:'阅读者'};
 const state={user:null,page:0,versionPage:0,search:'',view:'docs',doc:null,versions:[],users:[],load:0};
+let projects=[],taskRows=[],spinTimer=null;
 let noticeTimer;
 const button=(label,action,id='',cls='')=>`<button type="button" class="${cls}" data-action="${action}" data-id="${esc(id)}">${label}</button>`;
 const field=(label,name,value='',extra='')=>`<label>${label}<input name="${name}" value="${esc(value)}" ${extra}></label>`;
@@ -56,6 +57,7 @@ function renderLogin(message = '') {
           <button class="b-submit cursor-interaction" type="submit"><span>登录工作空间</span><i data-lucide="arrow-right" aria-hidden="true"></i></button>
           <p class="form-error b-form-error" role="alert"></p>
         </form>
+        <button type="button" class="project-entry" data-action="project-picker"><span class="project-entry-icon">✦</span><span><strong>项目随机抽取</strong><small>无需登录 · 维护项目名单并随机选取</small></span><span class="project-entry-arrow">→</span></button>
       </div>
       <p class="b-bottom"><i data-lucide="shield-check" aria-hidden="true"></i>账号由管理员分配 · 不开放自助注册</p>
     </section>
@@ -64,9 +66,16 @@ function renderLogin(message = '') {
     </main>`;
   setupLoginMedia(root.querySelector('main.login'));
 }
+async function projectPicker(){
+  state.load++;try{projects=await api('/projects');}catch(e){renderLogin();toast('项目名单暂不可用：'+e.message,true);return;}
+  root.innerHTML=`<main class="picker-page"><header class="picker-header"><button type="button" class="picker-back" data-action="picker-back">← 返回登录</button><div class="picker-brand"><span class="logo">B</span><span>BRD 文件库<small>PROJECT DRAW</small></span></div><span class="picker-pill">无需登录</span></header><section class="picker-main"><div class="picker-intro"><p class="eyebrow">A LITTLE MOMENT OF SURPRISE</p><h1>今天，开启哪个项目？</h1><p>把项目放进名单，交给随机抽取决定下一站。</p></div><section class="draw-card"><div class="draw-orbit" aria-hidden="true"></div><span class="draw-label">随机选中的项目</span><div class="draw-result" aria-live="polite">准备好了吗？</div><p class="draw-hint">当前共有 <strong>${projects.length}</strong> 个项目</p><button class="draw-button" data-action="draw" ${projects.length?'':'disabled'}>✦ &nbsp; 开始抽取</button></section><div class="picker-grid"><section class="project-list-card"><div class="picker-section-head"><div><span class="eyebrow">PROJECT LIST</span><h2>项目名单 <span>${projects.length}</span></h2></div><button type="button" class="refresh-projects" data-action="project-refresh" aria-label="刷新名单">↻</button></div><div class="project-list">${projects.length?projects.map((p,i)=>`<div class="project-row"><span class="project-index">${String(i+1).padStart(2,'0')}</span><span class="project-name">${esc(p.name)}</span><span class="project-dot"></span></div>`).join(''):'<div class="project-empty">还没有项目，先添加一个吧。</div>'}</div></section><section class="add-project-card"><span class="eyebrow">ADD TO THE POOL</span><h2>添加一个项目</h2><p>项目会保存到 BRD 项目名单，之后都可以参与抽取。</p><form data-form="project-add"><label class="project-input-label" for="project-name">项目名称</label><div class="project-input-wrap"><span>✦</span><input id="project-name" name="name" maxlength="100" required placeholder="例如：客户平台升级"></div><p class="form-error" role="alert"></p><button class="add-project-button" type="submit">＋ &nbsp; 保存到名单</button></form><div class="privacy-note">✦ &nbsp; 名单保存于 BRD 的 misc_setup 表</div></section></div></section><footer class="picker-footer">让每一次选择，都有一点期待。</footer></main>`;
+}
+async function refreshProjects(){projects=await api('/projects');await projectPicker();}
+function drawProject(){if(!projects.length){toast('请先添加项目');return;}const target=root.querySelector('.draw-result'),buttonEl=root.querySelector('[data-action="draw"]');if(spinTimer)clearInterval(spinTimer);buttonEl.disabled=true;buttonEl.textContent='正在抽取…';let count=0;spinTimer=setInterval(()=>{target.textContent=projects[Math.floor(Math.random()*projects.length)].name;count++;if(count>18){clearInterval(spinTimer);spinTimer=null;target.textContent=projects[Math.floor(Math.random()*projects.length)].name;target.classList.add('is-winner');buttonEl.disabled=false;buttonEl.innerHTML='↻ &nbsp; 再抽一次';}},85);}
 
 function renderShell(){
-  root.innerHTML=`<div class="shell"><aside><div class="brand"><span class="logo">B</span> BRD 文件库</div><p class="nav-label">工作空间</p>${button('▤ &nbsp; 文档库','docs','','nav '+(state.view==='docs'?'active':''))}${state.user.role==='ADMIN'?button('♙ &nbsp; 账号管理','users','','nav '+(state.view==='users'?'active':'')):''}<div class="aside-note"><strong>版本不再混淆</strong><p>一个文档编号<br>完整版本历史<br>唯一当前使用版</p></div><div class="profile"><span class="avatar">${esc(state.user.display_name?.slice(0,1)||'U')}</span><div>${esc(state.user.display_name)}<small>${roles[state.user.role]}</small></div></div></aside><div class="workspace"><header><span>工作空间 <span class="muted"> / ${state.view==='users'?'账号管理':'文档库'}</span></span><div>${button('修改密码','password')}${button('退出','logout')}</div></header><main id="content"></main><footer>BRD 文件库 · 上传与版本管理 · 不含审批流程</footer></div></div>`;
+  const viewNames={docs:'文档库',users:'账号管理',tasks:'任务配置'};
+  root.innerHTML=`<div class="shell"><aside><div class="brand"><span class="logo">B</span> BRD 文件库</div><p class="nav-label">工作空间</p>${button('▤ &nbsp; 文档库','docs','','nav '+(state.view==='docs'?'active':''))}${state.user.role==='ADMIN'?button('⚙ &nbsp; 任务配置','tasks','','nav '+(state.view==='tasks'?'active':''))+button('♙ &nbsp; 账号管理','users','','nav '+(state.view==='users'?'active':'')):''}<div class="aside-note"><strong>版本不再混淆</strong><p>一个文档编号<br>完整版本历史<br>唯一当前使用版</p></div><div class="profile"><span class="avatar">${esc(state.user.display_name?.slice(0,1)||'U')}</span><div>${esc(state.user.display_name)}<small>${roles[state.user.role]}</small></div></div></aside><div class="workspace"><header><span>工作空间 <span class="muted"> / ${viewNames[state.view]||'文档库'}</span></span><div>${button('修改密码','password')}${button('退出','logout')}</div></header><main id="content"></main><footer>BRD 文件库 · 上传与版本管理 · 不含审批流程</footer></div></div>`;
   if(state.user.must_change)document.querySelector('#content').innerHTML=`<section class="panel empty"><h2>请先修改临时密码</h2><p>设置至少 12 位的新密码，重新登录后即可使用系统功能。</p>${button('修改密码','password','','primary')}</section>`;
 }
 async function docs(reset=false){
@@ -87,6 +96,25 @@ async function detail(id,reset=true){
 async function users(){
   state.view='users';state.doc=null;renderShell();if(state.user.must_change)return;const ticket=++state.load,content=document.querySelector('#content');content.innerHTML='<p class="loading">正在加载账号…</p>';
   try{const rows=await api('/users');if(ticket!==state.load)return;state.users=rows;content.innerHTML=`<div class="page-head"><div><p class="eyebrow">ACCESS MANAGEMENT</p><h1>账号管理</h1><p class="muted">管理员管理全部文档，上传者维护自己的文档，阅读者仅查看和下载。</p></div>${button('＋ 新建账号','new-user','','primary')}</div><section class="panel"><div class="table-wrap"><table><thead><tr><th>姓名 / 用户名</th><th>角色</th><th>状态</th><th>密码</th><th>操作</th></tr></thead><tbody>${rows.map(u=>`<tr><td><strong>${esc(u.display_name)}</strong>${same(u.id,state.user.id)?badge('我'):''}<small>${esc(u.username)}</small></td><td>${roles[u.role]}</td><td>${badge(u.enabled?'正常':'已停用',u.enabled?'green':'gray')}</td><td>${u.must_change?'下次登录需修改':'已设置'}</td><td>${button('编辑','edit-user',u.id)}${button('重置密码','reset-user',u.id)}</td></tr>`).join('')}</tbody></table></div></section><p class="hint">角色或状态变更会使该账号的旧会话失效；系统会保护最后一个有效管理员。</p>`;}catch(e){content.innerHTML=`<p class="error">${esc(e.message)}</p>${button('重试','users')}`;failure(e);}
+}
+async function tasks(companyId=''){
+  state.view='tasks';state.doc=null;renderShell();if(state.user.must_change)return;
+  const content=document.querySelector('#content');
+  content.innerHTML=`<div class="page-head"><div><p class="eyebrow">TASK PIPELINE</p><h1>任务配置</h1><p class="muted">按公司维护执行类名、顺序和扩展参数。</p></div>${button('＋ 新增任务','new-task','','primary')}</div><section class="panel"><div class="toolbar"><form data-form="task-search" class="search task-search"><input name="companyId" aria-label="公司 ID" placeholder="输入 Company ID" value="${esc(companyId)}" required inputmode="numeric"><button type="submit">查询</button></form>${button('刷新','tasks-refresh')}</div><div id="task-results" class="task-results"><div class="empty task-prompt"><div class="empty-icon">⚙</div><h2>输入公司 ID 查看配置</h2><p>不同公司可以维护各自的执行类和运行顺序。</p></div></div></section>`;
+  if(companyId)await loadTasks(companyId);
+}
+async function loadTasks(companyId){
+  const results=document.querySelector('#task-results');if(!results)return;
+  try{
+    const rows=await api(`/tasks?companyId=${encodeURIComponent(companyId)}`);taskRows=rows;
+    results.innerHTML=rows.length?`<div class="task-company-summary"><span>公司 <strong>${esc(companyId)}</strong> 的任务</span><span>${rows.length} 项 · 按执行顺序排列</span></div><div class="table-wrap"><table><thead><tr><th>顺序</th><th>执行类名</th><th>状态</th><th>扩展字段</th><th>备注</th><th>操作</th></tr></thead><tbody>${rows.map(t=>`<tr><td><span class="task-order">${esc(t.order_no)}</span></td><td><strong class="task-class">${esc(t.class_name)}</strong><small>Company ID ${esc(t.company_id)}</small></td><td>${badge(t.enabled?'启用':'停用',t.enabled?'green':'gray')}</td><td><code class="task-json">${esc(t.other_fields||'{}')}</code></td><td>${esc(t.remark||'—')}</td><td>${button('编辑','edit-task',t.id)}${button('删除','delete-task',t.id)}</td></tr>`).join('')}</tbody></table></div>`:`<div class="empty"><div class="empty-icon">⚙</div><h2>此公司还没有任务配置</h2><p>添加执行类名和顺序后，这里会显示运行清单。</p>${button('＋ 新增第一项','new-task','','primary')}</div>`;
+  }catch(e){results.innerHTML=`<div class="empty"><h2>配置加载失败</h2><p>${esc(e.message)}</p></div>`;failure(e);}
+}
+function taskDialog(id=''){
+  const t=id?taskRows.find(x=>same(x.id,id))||{}:{};
+  const enabled=!([false,0,'0','false'].includes(t.enabled));
+  openDialog(id?'编辑任务配置':'新增任务配置',`<div class="grid-two">${field('Company ID','companyId',t.company_id||document.querySelector('[name="companyId"]')?.value||'','required min="1" type="number"')}${field('执行顺序 Order No','orderNo',t.order_no??0,'required min="0" type="number"')}</div>${field('执行类名 Class Name','className',t.class_name||'','required maxlength="255" placeholder="例如 com.example.jobs.SyncTask"')}<label>其他字段（JSON 对象）<textarea name="otherFields" maxlength="60000" spellcheck="false" placeholder='{"retry":3,"timeout":60}'>${esc(t.other_fields||'{}')}</textarea><small>用 JSON 对象保存此类的扩展参数。</small></label><label class="task-enabled"><input type="checkbox" name="enabled" ${enabled?'checked':''}>启用此任务</label><label>备注<textarea name="remark" maxlength="500" placeholder="可选">${esc(t.remark||'')}</textarea></label>`,'task','保存配置');
+  const form=modal.querySelector('form');form.dataset.id=id;
 }
 function openDialog(title,body,form,submit='保存'){
   modal.innerHTML=`<form data-form="${form}"><div class="dialog-head"><h2>${title}</h2>${button('✕','close')}</div>${body}<p class="form-error" role="alert"></p><div class="dialog-actions">${button('取消','close')}<button class="primary" type="submit">${submit}</button></div></form>`;modal.querySelectorAll('label > select').forEach(s=>s.setAttribute('aria-label',s.parentElement.firstChild.textContent.trim()));modal.showModal();
@@ -112,7 +140,9 @@ async function pollUpload(id,f){
 async function submit(f){
   const type=f.dataset.form,b=Object.fromEntries(new FormData(f));
   if(type==='login'){state.user=await api('/auth/login','POST',b);await docs(true);return;}
+  if(type==='project-add'){const saved=await api('/projects','POST',{name:b.name.trim()});toast('已添加「'+saved.name+'」');await projectPicker();return;}
   if(type==='search'){state.search=b.search.trim();await docs(true);return;}
+  if(type==='task-search'){if(!/^\d+$/.test(b.companyId.trim())||Number(b.companyId)<1)throw new Error('Company ID 必须是大于 0 的整数');await tasks(b.companyId.trim());return;}
   if(type==='password'){if(b.newPassword!==b.confirm)throw new Error('两次新密码不一致');await api('/auth/password','PUT',{oldPassword:b.oldPassword,newPassword:b.newPassword});modal.close();state.user=null;renderLogin('密码已更新，请使用新密码重新登录。');return;}
   if(type==='upload'){
     if(!f.dataset.job){const file=b.file;if(!file?.size)throw new Error('请选择非空文件');if(!/\.(pdf|docx)$/i.test(file.name)||file.size>20*1024*1024)throw new Error('仅支持不超过 20 MB 的 PDF / DOCX');const data=new FormData(f);f.querySelector('#upload-status').textContent='准备上传…';const result=await upload(f.dataset.document?`/brds/${f.dataset.document}/uploads`:'/brd-uploads',data,f.dataset.key,p=>{f.querySelector('#upload-status').textContent=`正在传输文件 ${p}%`;});f.dataset.job=result.uploadId;sessionStorage.setItem('brd-pending-upload',JSON.stringify({id:result.uploadId,user:state.user.id}));}
@@ -122,11 +152,17 @@ async function submit(f){
   if(type==='current'){await api(`/brds/${state.doc.id}/current-version`,'PUT',{versionId:f.dataset.id,expectedRevision:f.dataset.revision,reason:b.reason});modal.close();toast('当前使用版已切换，历史版本仍保留');await detail(state.doc.id);return;}
   if(type==='user'){const id=f.dataset.id;await api(id?'/users/'+id:'/users',id?'PATCH':'POST',id?{...b,enabled:b.enabled==='true'}:b);modal.close();toast('账号已保存');if(id&&same(id,state.user.id)){state.user=null;renderLogin('账号权限已更新，请重新登录。');}else await users();return;}
   if(type==='reset'){await api(`/users/${f.dataset.id}/password-reset`,'POST',b);modal.close();toast('密码已重置，下次登录需修改');if(same(f.dataset.id,state.user.id)){state.user=null;renderLogin('请用重置后的临时密码重新登录。');}else await users();}
+  if(type==='task'){let fields={};try{fields=JSON.parse(b.otherFields||'{}');}catch{throw new Error('其他字段不是有效的 JSON');}if(!fields||Array.isArray(fields)||typeof fields!=='object')throw new Error('其他字段必须是 JSON 对象');const payload={companyId:Number(b.companyId),className:b.className.trim(),orderNo:Number(b.orderNo),enabled:f.elements.enabled.checked,otherFields:fields,remark:b.remark.trim()};if(!Number.isInteger(payload.companyId)||payload.companyId<1)throw new Error('Company ID 必须是大于 0 的整数');if(!Number.isInteger(payload.orderNo)||payload.orderNo<0)throw new Error('Order No 必须是大于等于 0 的整数');const id=f.dataset.id;await api(id?`/tasks/${id}`:'/tasks',id?'PUT':'POST',payload);modal.close();toast('任务配置已保存');await tasks(String(payload.companyId));return;}
 }
 document.addEventListener('submit',async e=>{const f=e.target;if(!f.matches('[data-form]'))return;e.preventDefault();if(f.dataset.busy)return;f.dataset.busy='true';const controls=[...f.querySelectorAll('button')];controls.forEach(b=>b.disabled=true);f.querySelector('.form-error')?.replaceChildren();
   try{await submit(f);}catch(err){const target=f.querySelector('.form-error');if(target)target.textContent=err.message;if(err.status===401||err.code==='PASSWORD_CHANGE_REQUIRED')failure(err);else if(!target)toast(err.message,true);if(f.dataset.job){const btn=f.querySelector('[type="submit"]');if(btn)btn.textContent='继续检查';}}finally{delete f.dataset.busy;controls.forEach(b=>b.disabled=false);}
 });
 document.addEventListener('click',async e=>{
+  const pickerAction=e.target.closest('[data-action]')?.dataset.action;
+  if(pickerAction==='project-picker'){await projectPicker();return;}
+  if(pickerAction==='picker-back'){if(spinTimer){clearInterval(spinTimer);spinTimer=null;}renderLogin();return;}
+  if(pickerAction==='project-refresh'){try{await refreshProjects();}catch(err){toast(err.message,true);}return;}
+  if(pickerAction==='draw'){drawProject();return;}
   const eye=e.target.closest('#brd-login-motion .b-eye');
   if(eye){
     const input=document.querySelector('#brd-login-motion #brd-demo-password');
@@ -138,7 +174,7 @@ document.addEventListener('click',async e=>{
     if(action==='close'){if(modal.querySelector('[data-busy]'))return;modal.close();return;}
     if(action==='password')return passwordDialog();
     if(action==='logout'){await api('/auth/logout','POST');state.load++;state.user=null;renderLogin();return;}
-    if(action==='docs')return await docs(true);if(action==='refresh')return await docs();if(action==='users')return await users();
+    if(action==='docs')return await docs(true);if(action==='refresh')return await docs();if(action==='users')return await users();if(action==='tasks')return await tasks();if(action==='tasks-refresh')return await tasks(document.querySelector('[name="companyId"]')?.value.trim()||'');if(action==='new-task')return taskDialog();if(action==='edit-task')return taskDialog(id);if(action==='delete-task'){const t=taskRows.find(x=>same(x.id,id));if(!t||!confirm(`确定删除执行类“${t.class_name}”吗？`))return;await api('/tasks/'+id,'DELETE');toast('任务配置已删除');return await tasks(String(t.company_id));}
     if(action==='detail'||action==='refresh-detail')return await detail(id);
     if(action==='doc-prev'||action==='doc-next'){state.page+=action.endsWith('next')?1:-1;return await docs();}
     if(action==='version-prev'||action==='version-next'){state.versionPage+=action.endsWith('next')?1:-1;return await detail(state.doc.id,false);}

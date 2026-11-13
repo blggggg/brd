@@ -33,7 +33,7 @@ class AccountGate extends OncePerRequestFilter {
     AccountGate(Db db){this.db=db;}
     @Override protected void doFilterInternal(HttpServletRequest req,HttpServletResponse res,FilterChain chain)throws ServletException,IOException{
         String path=req.getRequestURI();
-        if(!path.startsWith("/api/")||Set.of("/api/v1/auth/login","/api/v1/auth/csrf").contains(path)){chain.doFilter(req,res);return;}
+        if(!path.startsWith("/api/")||Set.of("/api/v1/auth/login","/api/v1/auth/csrf").contains(path)||path.equals("/api/v1/projects")){chain.doFilter(req,res);return;}
         var session=req.getSession(false); Map<String,Object> user=null;
         if(session!=null&&session.getAttribute("uid")!=null){
             var rows=db.list("SELECT * FROM app_user WHERE id=?",session.getAttribute("uid"));
