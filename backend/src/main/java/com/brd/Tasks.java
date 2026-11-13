@@ -8,32 +8,35 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/tasks")
 public class Tasks {
-    private final ProjectDatabase database;
+    private final TaskMapper tasks;
     private final ObjectMapper json;
 
-    Tasks(ProjectDatabase database) {
-        this.database = database;
+    Tasks(TaskMapper tasks) {
+        this.tasks = tasks;
         this.json = new ObjectMapper();
     }
 
     @GetMapping
-    List<Map<String,Object>> list(@RequestParam long companyId, HttpServletRequest request) {
+    List<Map<String,Object>> list(@RequestParam long companyId, @RequestParam int reportFormatId, HttpServletRequest request) {
         requireAdmin(request);
         if (companyId < 1) throw new Problem(400, "INVALID_INPUT", "companyId 必须大于 0");
-        return database.list("SELECT id, company_id, class_name, order_no, enabled, other_fields, remark, created_at, updated_at FROM task WHERE company_id=? ORDER BY order_no, id", companyId);
+        if (reportFormatId < 0) throw new Problem(400, "INVALID_INPUT", "reportFormatId 不能小于 0");
+        return tasks.list(companyId, reportFormatId);
     }
 
     @PostMapping
     Map<String,Object> create(@RequestBody Map<String,Object> body, HttpServletRequest request) {
         requireAdmin(request);
         long companyId = positive(body, "companyId");
+        int reportFormatId = format(body);
         String className = Db.text(body, "className", 1, 255);
         int orderNo = order(body);
         boolean enabled = enabled(body);
         String fields = fields(body.get("otherFields"));
         String remark = optionalText(body.get("remark"), 500, "remark");
-        long id = database.insert("INSERT INTO task(company_id,class_name,order_no,enabled,other_fields,remark,created_at,updated_at) VALUES(?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)", companyId, className, orderNo, enabled, fields, remark);
-        return database.one("SELECT id, company_id, class_name, order_no, enabled, other_fields, remark, created_at, updated_at FROM task WHERE id=?", id);
+        Map<String,Object> row = row(companyId, reportFormatId, className, orderNo, enabled, fields, remark);
+        tasks.insert(row);
+        return tasks.one(((Number)row.get("id")).longValue());
     }
 
     @PutMapping("/{id}")
@@ -41,21 +44,24 @@ public class Tasks {
         requireAdmin(request);
         if (id < 1) throw new Problem(400, "INVALID_INPUT", "任务 ID 无效");
         long companyId = positive(body, "companyId");
+        int reportFormatId = format(body);
         String className = Db.text(body, "className", 1, 255);
         int orderNo = order(body);
         boolean enabled = enabled(body);
         String fields = fields(body.get("otherFields"));
         String remark = optionalText(body.get("remark"), 500, "remark");
-        int count = database.update("UPDATE task SET company_id=?,class_name=?,order_no=?,enabled=?,other_fields=?,remark=?,updated_at=CURRENT_TIMESTAMP WHERE id=?", companyId, className, orderNo, enabled, fields, remark, id);
+        Map<String,Object> row = row(companyId, reportFormatId, className, orderNo, enabled, fields, remark);
+        row.put("id", id);
+        int count = tasks.update(row);
         if (count == 0) throw new Problem(404, "NOT_FOUND", "任务配置不存在");
-        return database.one("SELECT id, company_id, class_name, order_no, enabled, other_fields, remark, created_at, updated_at FROM task WHERE id=?", id);
+        return tasks.one(id);
     }
 
     @DeleteMapping("/{id}")
     Map<String,Object> delete(@PathVariable long id, HttpServletRequest request) {
         requireAdmin(request);
         if (id < 1) throw new Problem(400, "INVALID_INPUT", "任务 ID 无效");
-        int count = database.update("DELETE FROM task WHERE id=?", id);
+        int count = tasks.delete(id);
         if (count == 0) throw new Problem(404, "NOT_FOUND", "任务配置不存在");
         return Map.of("deleted", true, "id", id);
     }
@@ -78,6 +84,23 @@ public class Tasks {
         } catch (Exception error) {
             throw new Problem(400, "INVALID_INPUT", "orderNo 必须是大于等于 0 的整数");
         }
+    }
+
+    private static int format(Map<String,Object> body) {
+        try {
+            int value = Integer.parseInt(String.valueOf(body.get("reportFormatId")));
+            if (value < 0) throw new NumberFormatException();
+            return value;
+        } catch (Exception error) {
+            throw new Problem(400, "INVALID_INPUT", "reportFormatId 必须是大于等于 0 的整数");
+        }
+    }
+
+    private static Map<String,Object> row(long companyId,int reportFormatId,String className,int orderNo,boolean enabled,String fields,String remark) {
+        var row = new HashMap<String,Object>();
+        row.put("companyId",companyId);row.put("reportFormatId",reportFormatId);row.put("className",className);
+        row.put("orderNo",orderNo);row.put("enabled",enabled);row.put("otherFields",fields);row.put("remark",remark);
+        return row;
     }
 
     private static boolean enabled(Map<String,Object> body) {

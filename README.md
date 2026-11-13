@@ -2,6 +2,14 @@
 
 已实现本地可运行的文件版本管理和账号管理，不含审批。
 
+## 先看这里：要启动哪个文件？
+
+- **发布或更新服务器**：双击项目根目录的 `package.bat`。它会构建前后端、上传 JAR 并重启服务器。首次运行前要配置 `deploy.local.ps1` 和 SSH 私钥 `~/.ssh/brd_deploy`。
+- **只在本机启动现有版本**：运行 `powershell -ExecutionPolicy Bypass -File .\start.ps1`。它要求先有构建好的 JAR，不会部署到服务器。
+- **开发前端页面**：进入 `backend/src/main/frontend` 后运行 `npm run dev`；普通使用或发布不用单独启动 Vite。
+
+通常发布只需双击 `package.bat`。不要直接运行旁边的 `package.ps1`；它是批处理入口调用的内部实现。`deploy.local.ps1` 仅保存本机部署配置。
+
 ## 技术
 
 - 后端：Java 17、Spring Boot 4、Spring Security、JDBC、Flyway。
