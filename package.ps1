@@ -7,7 +7,14 @@ $maven = Join-Path $mavenHome 'bin\mvn.cmd'
 try {
     if (-not (Test-Path -LiteralPath $maven)) { throw "Maven not found: $maven" }
     $javaHome = if ($env:JAVA_HOME -and (Test-Path -LiteralPath $env:JAVA_HOME)) { $env:JAVA_HOME } else { 'C:\Program Files\Java\jdk-17' }
-    if (-not (Test-Path -LiteralPath $javaHome)) { throw "JDK 17 not found: $javaHome" }
+    $javac = Join-Path $javaHome 'bin\javac.exe'
+    $compilerVersion = if (Test-Path -LiteralPath $javac) { (& $javac -version 2>&1 | Out-String).Trim() } else { '' }
+    if ($compilerVersion -notmatch '^javac (17|1[89]|[2-9][0-9])\.') {
+        $javaHome = 'C:\Program Files\Java\jdk-17'
+        $javac = Join-Path $javaHome 'bin\javac.exe'
+        $compilerVersion = if (Test-Path -LiteralPath $javac) { (& $javac -version 2>&1 | Out-String).Trim() } else { '' }
+    }
+    if ($compilerVersion -notmatch '^javac (17|1[89]|[2-9][0-9])\.') { throw "JDK 17 or newer is required. Selected compiler: $compilerVersion" }
 
     $env:JAVA_HOME = $javaHome
     $env:MAVEN_HOME = $mavenHome

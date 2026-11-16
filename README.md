@@ -12,7 +12,7 @@
 
 ## 技术
 
-- 后端：Java 17、Spring Boot 4、Spring Security、JDBC、Flyway。
+- 后端：Java 17、Spring Boot 4、Spring Security、MyBatis、Flyway。BRD 业务表和 BVLDB 项目/任务表通过 MyBatis Mapper 访问；Spring Session 使用 JDBC 持久化会话。
 - 前端：原生 HTML + CSS + JavaScript；Vite 只用于开发和打包，不使用 Vue/TypeScript。
 - 当前本地开发数据库：H2 文件库。不要复用 pet 项目的数据库或密码。
 
@@ -48,7 +48,9 @@ java -jar target/brd-management-0.1.0.jar
 
 ## 已实现
 
-文档列表、标题/项目/批次搜索、分页、新建文档、PDF/DOCX 上传、变更说明、版本历史、内容去重、下载、手动切换当前使用版（可回退）、操作记录、元数据编辑和管理员转交负责人。
+文档列表、标题/项目/批次搜索、分页、新建文档、PDF/DOCX 上传、变更说明、版本历史、内容去重、下载、手动切换当前使用版（可回退）、操作记录、元数据编辑和管理员转交负责人。管理员可维护按公司、报告格式和执行顺序排列的任务配置；“生成报告”入口可查看 Walmart Canada 任务清单。
+
+Walmart Canada 页面当前用于查看任务计划。完整报告生成尚未接入：需要真实 WMCA 报告任务源码、Word 模板和业务数据 Mapper。页面会明确显示引擎未接入，不会生成示例报告。
 
 管理员可创建账号、修改显示名称与角色、启停账号、重置密码。上传者只能修改自己负责的文档，阅读者只能查看和下载。首次修改密码和会话失效均由后端校验。
 

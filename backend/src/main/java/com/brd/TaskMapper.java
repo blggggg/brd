@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.ibatis.annotations.*;
 
-interface TaskMapper {
+public interface TaskMapper {
     @Select("SELECT id, company_id, report_format_id, class_name, order_no, enabled, other_fields, remark, created_at, updated_at FROM task WHERE company_id=#{companyId} AND report_format_id=#{reportFormatId} ORDER BY order_no, id")
     List<Map<String,Object>> list(@Param("companyId") long companyId, @Param("reportFormatId") int reportFormatId);
 

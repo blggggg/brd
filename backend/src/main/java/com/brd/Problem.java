@@ -9,7 +9,7 @@ import org.springframework.jdbc.CannotGetJdbcConnectionException;
 
 public class Problem extends RuntimeException {
     final int status; final String code;
-    Problem(int status,String code,String message){super(message);this.status=status;this.code=code;}
+    public Problem(int status,String code,String message){super(message);this.status=status;this.code=code;}
 }
 
 @RestControllerAdvice

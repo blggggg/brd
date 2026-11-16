@@ -2,6 +2,7 @@ import './login-motion.css';
 import {setupLoginMedia} from './login-media.js';
 import {api,upload,download} from './api.js';
 import {esc,same,code,canWrite,size,newUploadKey} from './helpers.js';
+import {walmartReportsPage,walmartPlanResult} from './walmart/reports.js';
 
 const root=document.querySelector('#app'),modal=document.querySelector('#modal'),notice=document.querySelector('#notice');
 const roles={ADMIN:'管理员',UPLOADER:'上传者',READER:'阅读者'};
@@ -74,8 +75,8 @@ async function refreshProjects(){projects=await api('/projects');await projectPi
 function drawProject(){if(!projects.length){toast('请先添加项目');return;}const target=root.querySelector('.draw-result'),buttonEl=root.querySelector('[data-action="draw"]');if(spinTimer)clearInterval(spinTimer);buttonEl.disabled=true;buttonEl.textContent='正在抽取…';let count=0;spinTimer=setInterval(()=>{target.textContent=projects[Math.floor(Math.random()*projects.length)].name;count++;if(count>18){clearInterval(spinTimer);spinTimer=null;target.textContent=projects[Math.floor(Math.random()*projects.length)].name;target.classList.add('is-winner');buttonEl.disabled=false;buttonEl.innerHTML='↻ &nbsp; 再抽一次';}},85);}
 
 function renderShell(){
-  const viewNames={docs:'文档库',users:'账号管理',tasks:'任务配置'};
-  root.innerHTML=`<div class="shell"><aside><div class="brand"><span class="logo">B</span> BRD 文件库</div><p class="nav-label">工作空间</p>${button('▤ &nbsp; 文档库','docs','','nav '+(state.view==='docs'?'active':''))}${state.user.role==='ADMIN'?button('⚙ &nbsp; 任务配置','tasks','','nav '+(state.view==='tasks'?'active':''))+button('♙ &nbsp; 账号管理','users','','nav '+(state.view==='users'?'active':'')):''}<div class="aside-note"><strong>版本不再混淆</strong><p>一个文档编号<br>完整版本历史<br>唯一当前使用版</p></div><div class="profile"><span class="avatar">${esc(state.user.display_name?.slice(0,1)||'U')}</span><div>${esc(state.user.display_name)}<small>${roles[state.user.role]}</small></div></div></aside><div class="workspace"><header><span>工作空间 <span class="muted"> / ${viewNames[state.view]||'文档库'}</span></span><div>${button('修改密码','password')}${button('退出','logout')}</div></header><main id="content"></main><footer>BRD 文件库 · 上传与版本管理 · 不含审批流程</footer></div></div>`;
+  const viewNames={docs:'文档库',reports:'生成报告',users:'账号管理',tasks:'任务配置'};
+  root.innerHTML=`<div class="shell"><aside><div class="brand"><span class="logo">B</span> BRD 文件库</div><p class="nav-label">工作空间</p>${button('▤ &nbsp; 生成报告','reports','','nav '+(state.view==='reports'?'active':''))}${button('▤ &nbsp; 文档库','docs','','nav '+(state.view==='docs'?'active':''))}${state.user.role==='ADMIN'?button('⚙ &nbsp; 任务配置','tasks','','nav '+(state.view==='tasks'?'active':''))+button('♙ &nbsp; 账号管理','users','','nav '+(state.view==='users'?'active':'')):''}<div class="aside-note"><strong>版本不再混淆</strong><p>一个文档编号<br>完整版本历史<br>唯一当前使用版</p></div><div class="profile"><span class="avatar">${esc(state.user.display_name?.slice(0,1)||'U')}</span><div>${esc(state.user.display_name)}<small>${roles[state.user.role]}</small></div></div></aside><div class="workspace"><header><span>工作空间 <span class="muted"> / ${viewNames[state.view]||'文档库'}</span></span><div>${button('修改密码','password')}${button('退出','logout')}</div></header><main id="content"></main><footer>BRD 文件库 · 上传与版本管理</footer></div></div>`;
   if(state.user.must_change)document.querySelector('#content').innerHTML=`<section class="panel empty"><h2>请先修改临时密码</h2><p>设置至少 12 位的新密码，重新登录后即可使用系统功能。</p>${button('修改密码','password','','primary')}</section>`;
 }
 async function docs(reset=false){
@@ -102,6 +103,10 @@ async function tasks(companyId='',reportFormatId=''){
   const content=document.querySelector('#content');
   content.innerHTML=`<div class="page-head"><div><p class="eyebrow">TASK PIPELINE</p><h1>任务配置</h1><p class="muted">按公司与报告格式维护执行类、顺序和扩展参数。</p></div>${button('＋ 新增任务','new-task','','primary')}</div><section class="panel"><div class="toolbar"><form data-form="task-search" class="search task-search"><input name="companyId" aria-label="公司 ID" placeholder="Company ID" value="${esc(companyId)}" required inputmode="numeric"><input name="reportFormatId" aria-label="报告格式 ID" placeholder="报告格式 ID（通用填 0）" value="${esc(reportFormatId)}" required inputmode="numeric"><button type="submit">查询</button></form>${button('刷新','tasks-refresh')}</div><div id="task-results" class="task-results"><div class="empty task-prompt"><div class="empty-icon">⚙</div><h2>输入公司 ID 和报告格式查看配置</h2><p>例如公司 2105259、报告格式 60。</p></div></div></section>`;
   if(companyId&&reportFormatId!=='')await loadTasks(companyId,reportFormatId);
+}
+function reports(){
+  state.view='reports';state.doc=null;renderShell();if(state.user.must_change)return;
+  document.querySelector('#content').innerHTML=walmartReportsPage(state.user.role==='ADMIN');
 }
 async function loadTasks(companyId,reportFormatId){
   const results=document.querySelector('#task-results');if(!results)return;
@@ -143,6 +148,10 @@ async function submit(f){
   if(type==='project-add'){const saved=await api('/projects','POST',{name:b.name.trim()});toast('已添加「'+saved.name+'」');await projectPicker();return;}
   if(type==='search'){state.search=b.search.trim();await docs(true);return;}
   if(type==='task-search'){if(!/^\d+$/.test(b.companyId.trim())||Number(b.companyId)<1)throw new Error('Company ID 必须是大于 0 的整数');if(!/^\d+$/.test(b.reportFormatId.trim()))throw new Error('报告格式 ID 必须是大于等于 0 的整数');await tasks(b.companyId.trim(),b.reportFormatId.trim());return;}
+  if(type==='walmart-plan'){
+    const plan=await api(`/walmart/report-plan?companyId=${encodeURIComponent(b.companyId)}&reportFormatId=${encodeURIComponent(b.reportFormatId)}&reportNo=${encodeURIComponent(b.reportNo.trim())}`);
+    document.querySelector('#walmart-plan').innerHTML=walmartPlanResult(plan);return;
+  }
   if(type==='password'){if(b.newPassword!==b.confirm)throw new Error('两次新密码不一致');await api('/auth/password','PUT',{oldPassword:b.oldPassword,newPassword:b.newPassword});modal.close();state.user=null;renderLogin('密码已更新，请使用新密码重新登录。');return;}
   if(type==='upload'){
     if(!f.dataset.job){const file=b.file;if(!file?.size)throw new Error('请选择非空文件');if(!/\.(pdf|docx)$/i.test(file.name)||file.size>20*1024*1024)throw new Error('仅支持不超过 20 MB 的 PDF / DOCX');const data=new FormData(f);f.querySelector('#upload-status').textContent='准备上传…';const result=await upload(f.dataset.document?`/brds/${f.dataset.document}/uploads`:'/brd-uploads',data,f.dataset.key,p=>{f.querySelector('#upload-status').textContent=`正在传输文件 ${p}%`;});f.dataset.job=result.uploadId;sessionStorage.setItem('brd-pending-upload',JSON.stringify({id:result.uploadId,user:state.user.id}));}
@@ -174,7 +183,7 @@ document.addEventListener('click',async e=>{
     if(action==='close'){if(modal.querySelector('[data-busy]'))return;modal.close();return;}
     if(action==='password')return passwordDialog();
     if(action==='logout'){await api('/auth/logout','POST');state.load++;state.user=null;renderLogin();return;}
-    if(action==='docs')return await docs(true);if(action==='refresh')return await docs();if(action==='users')return await users();if(action==='tasks')return await tasks();if(action==='tasks-refresh')return await tasks(document.querySelector('[name="companyId"]')?.value.trim()||'',document.querySelector('[name="reportFormatId"]')?.value.trim()||'');if(action==='new-task')return taskDialog();if(action==='edit-task')return taskDialog(id);if(action==='delete-task'){const t=taskRows.find(x=>same(x.id,id));if(!t||!confirm(`确定删除执行类“${t.class_name}”吗？`))return;await api('/tasks/'+id,'DELETE');toast('任务配置已删除');return await tasks(String(t.company_id),String(t.report_format_id));}
+    if(action==='reports')return reports();if(action==='docs')return await docs(true);if(action==='refresh')return await docs();if(action==='users')return await users();if(action==='tasks')return await tasks();if(action==='tasks-refresh')return await tasks(document.querySelector('[name="companyId"]')?.value.trim()||'',document.querySelector('[name="reportFormatId"]')?.value.trim()||'');if(action==='new-task')return taskDialog();if(action==='edit-task')return taskDialog(id);if(action==='delete-task'){const t=taskRows.find(x=>same(x.id,id));if(!t||!confirm(`确定删除执行类“${t.class_name}”吗？`))return;await api('/tasks/'+id,'DELETE');toast('任务配置已删除');return await tasks(String(t.company_id),String(t.report_format_id));}
     if(action==='detail'||action==='refresh-detail')return await detail(id);
     if(action==='doc-prev'||action==='doc-next'){state.page+=action.endsWith('next')?1:-1;return await docs();}
     if(action==='version-prev'||action==='version-next'){state.versionPage+=action.endsWith('next')?1:-1;return await detail(state.doc.id,false);}

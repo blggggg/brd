@@ -117,7 +117,7 @@ Word/PDF 保存前的 WMCA 代码内追加任务顺序见第 2.1 节。`ReportCo
 
 ## 7. 当前 BRD 项目代码范围
 
-本说明依据用户提供的技术资料编写。当前检查到的 `E:\project\brd-management` 是文档版本管理应用，源码中没有 `ReportEngineTaskController`、`DrawProtocolSummaryTable`、`MiscellaneousMapper` 或上述报告生成模块。因此，本说明定义了目标行为和核对标准，但不代表这些 WMCA 报告链路已在该仓库中实现。要直接修改报告生成逻辑，需要将相应报告引擎源码纳入该项目或提供其仓库路径。
+BRD 当前有独立的 `com.brd.walmart` 报告计划 API 和“生成报告”页面入口。它按公司及报告格式读取已启用任务配置并显示顺序。此入口不是报告引擎：尚未接入 `ReportEngineTaskController`、`DrawProtocolSummaryTable`、`MiscellaneousMapper`、Word 模板及报告业务数据 Mapper，不会生成报告文件。完成真正生成需要把对应 WMCA 报告引擎源码、模板和业务数据库访问代码纳入项目。
 
 ## 8. 表设计
 
