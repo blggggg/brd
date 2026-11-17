@@ -25,6 +25,7 @@ class TaskMyBatisConfiguration {
         factory.setDataSource(source);
         SqlSessionFactory sqlSessionFactory = factory.getObject();
         sqlSessionFactory.getConfiguration().addMapper(TaskMapper.class);
+        sqlSessionFactory.getConfiguration().addMapper(CompanyMapper.class);
         sqlSessionFactory.getConfiguration().addMapper(MiscSetupMapper.class);
         return sqlSessionFactory;
     }
@@ -37,6 +38,11 @@ class TaskMyBatisConfiguration {
     @Bean
     TaskMapper taskMapper(@Qualifier("taskSqlSessionTemplate") SqlSessionTemplate template) {
         return template.getMapper(TaskMapper.class);
+    }
+
+    @Bean
+    CompanyMapper companyMapper(@Qualifier("taskSqlSessionTemplate") SqlSessionTemplate template) {
+        return template.getMapper(CompanyMapper.class);
     }
 
     @Bean
