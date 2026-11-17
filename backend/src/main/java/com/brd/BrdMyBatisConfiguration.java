@@ -16,6 +16,9 @@ class BrdMyBatisConfiguration {
         factory.setDataSource(dataSource);
         SqlSessionFactory result = factory.getObject();
         result.getConfiguration().addMapper(BrdMapper.class);
+        result.getConfiguration().addMapper(TaskMapper.class);
+        result.getConfiguration().addMapper(CompanyMapper.class);
+        result.getConfiguration().addMapper(MiscSetupMapper.class);
         return result;
     }
 
@@ -27,5 +30,20 @@ class BrdMyBatisConfiguration {
     @Bean
     BrdMapper brdMapper(@Qualifier("brdSqlSessionTemplate") SqlSessionTemplate template) {
         return template.getMapper(BrdMapper.class);
+    }
+
+    @Bean
+    TaskMapper taskMapper(@Qualifier("brdSqlSessionTemplate") SqlSessionTemplate template) {
+        return template.getMapper(TaskMapper.class);
+    }
+
+    @Bean
+    CompanyMapper companyMapper(@Qualifier("brdSqlSessionTemplate") SqlSessionTemplate template) {
+        return template.getMapper(CompanyMapper.class);
+    }
+
+    @Bean
+    MiscSetupMapper miscSetupMapper(@Qualifier("brdSqlSessionTemplate") SqlSessionTemplate template) {
+        return template.getMapper(MiscSetupMapper.class);
     }
 }

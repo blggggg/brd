@@ -14,10 +14,15 @@ $securePassword = Read-Host "BVLDB MySQL password for $DatabaseUser" -AsSecureSt
 if ($securePassword.Length -eq 0) { throw 'A non-empty BVLDB password is required.' }
 $passwordPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
 $plainPassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($passwordPointer)
+$secureAdminPassword = Read-Host 'Initial BRD admin password (ignored if an account already exists)' -AsSecureString
+if ($secureAdminPassword.Length -gt 0 -and $secureAdminPassword.Length -lt 12) { throw 'The initial BRD admin password must be at least 12 characters.' }
+$adminPasswordPointer = if ($secureAdminPassword.Length -gt 0) { [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureAdminPassword) } else { [IntPtr]::Zero }
+$plainAdminPassword = if ($adminPasswordPointer -ne [IntPtr]::Zero) { [Runtime.InteropServices.Marshal]::PtrToStringBSTR($adminPasswordPointer) } else { '' }
 
 $previousUrl = $env:BRD_PROJECT_DB_URL
 $previousUser = $env:BRD_PROJECT_DB_USER
 $previousPassword = $env:BRD_PROJECT_DB_PASSWORD
+$previousAdminPassword = $env:BRD_ADMIN_PASSWORD
 $previousPort = $env:PORT
 
 Push-Location $brdBackend
@@ -25,6 +30,7 @@ try {
     $env:BRD_PROJECT_DB_URL = $DatabaseUrl
     $env:BRD_PROJECT_DB_USER = $DatabaseUser
     $env:BRD_PROJECT_DB_PASSWORD = $plainPassword
+    $env:BRD_ADMIN_PASSWORD = $plainAdminPassword
     $env:PORT = [string]$Port
     & $brdJava -jar $brdJar
     if ($LASTEXITCODE -ne 0) { throw "Application exited with code $LASTEXITCODE" }
@@ -34,7 +40,10 @@ finally {
     $env:BRD_PROJECT_DB_URL = $previousUrl
     $env:BRD_PROJECT_DB_USER = $previousUser
     $env:BRD_PROJECT_DB_PASSWORD = $previousPassword
+    $env:BRD_ADMIN_PASSWORD = $previousAdminPassword
     $env:PORT = $previousPort
     [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($passwordPointer)
+    if ($adminPasswordPointer -ne [IntPtr]::Zero) { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($adminPasswordPointer) }
     $plainPassword = $null
+    $plainAdminPassword = $null
 }

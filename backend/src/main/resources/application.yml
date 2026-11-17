@@ -9,25 +9,18 @@ server:
         same-site: lax
 spring:
   datasource:
-    url: jdbc:h2:file:./data/brd;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_ON_EXIT=FALSE
-    username: sa
-    password: ''
+    url: ${BRD_PROJECT_DB_URL:jdbc:mysql://8.137.166.134:3306/BVLDB?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai}
+    username: ${BRD_PROJECT_DB_USER:root}
+    password: ${BRD_PROJECT_DB_PASSWORD:}
   servlet:
     multipart:
       max-file-size: 20MB
       max-request-size: 21MB
   session:
     jdbc:
-      initialize-schema: always
-  flyway:
-    enabled: true
+      initialize-schema: never
 brd:
   storage: ${BRD_STORAGE:./data/files}
-  projects:
-    datasource:
-      url: ${BRD_PROJECT_DB_URL:jdbc:mysql://8.137.166.134:3306/BVLDB?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai}
-      username: ${BRD_PROJECT_DB_USER:root}
-      password: ${BRD_PROJECT_DB_PASSWORD:}
   # Set BRD_ADMIN_PASSWORD in the environment for a fresh installation.
   admin-password: ${BRD_ADMIN_PASSWORD:}
   scanner: ${BRD_SCANNER:structural}
