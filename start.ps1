@@ -7,8 +7,33 @@ param(
 $ErrorActionPreference = 'Stop'
 $brdBackend = Join-Path $PSScriptRoot 'backend'
 $brdJar = Join-Path $brdBackend 'target\brd-management-0.1.0.jar'
-if (-not (Test-Path -LiteralPath $brdJar)) { throw 'Build the project first: mvn -f backend/pom.xml clean verify' }
 $brdJava = if (Test-Path 'C:\Program Files\Java\jdk-17\bin\java.exe') { 'C:\Program Files\Java\jdk-17\bin\java.exe' } else { 'java' }
+$brdJavaHome = if (Test-Path 'C:\Program Files\Java\jdk-17') { 'C:\Program Files\Java\jdk-17' } else { $null }
+$brdMaven = 'C:\Users\毕浪\Documents\Codex\2026-10-10\cd-e-project-brd-management-backend\work\maven\apache-maven-3.9.9\bin\mvn.cmd'
+if (-not (Test-Path -LiteralPath $brdMaven)) {
+    $mvnCommand = Get-Command mvn -ErrorAction SilentlyContinue
+    if (-not $mvnCommand) { throw 'Maven 3.6.3+ was not found. Install a supported Maven version before starting.' }
+    $brdMaven = $mvnCommand.Source
+}
+
+$frontend = Join-Path $brdBackend 'src\main\frontend'
+Push-Location $frontend
+try {
+    & npm run build
+    if ($LASTEXITCODE -ne 0) { throw "Frontend build exited with code $LASTEXITCODE" }
+}
+finally { Pop-Location }
+
+$previousJavaHome = $env:JAVA_HOME
+$previousPath = $env:PATH
+if ($brdJavaHome) { $env:JAVA_HOME = $brdJavaHome; $env:PATH = "$brdJavaHome\bin;$env:PATH" }
+Push-Location $brdBackend
+try {
+    & $brdMaven -f pom.xml -DskipTests -Dexec.skip=true package
+    if ($LASTEXITCODE -ne 0) { throw "Backend package exited with code $LASTEXITCODE" }
+}
+finally { Pop-Location }
+if (-not (Test-Path -LiteralPath $brdJar)) { throw 'The updated application JAR was not created.' }
 
 $securePassword = Read-Host "BVLDB MySQL password for $DatabaseUser" -AsSecureString
 if ($securePassword.Length -eq 0) { throw 'A non-empty BVLDB password is required.' }
@@ -42,6 +67,8 @@ finally {
     $env:BRD_PROJECT_DB_PASSWORD = $previousPassword
     $env:BRD_ADMIN_PASSWORD = $previousAdminPassword
     $env:PORT = $previousPort
+    $env:JAVA_HOME = $previousJavaHome
+    $env:PATH = $previousPath
     [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($passwordPointer)
     if ($adminPasswordPointer -ne [IntPtr]::Zero) { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($adminPasswordPointer) }
     $plainPassword = $null
