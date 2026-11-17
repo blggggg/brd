@@ -7,7 +7,7 @@ import {reportsPage,reportPlanResult} from './reports/reports.js';
 const root=document.querySelector('#app'),modal=document.querySelector('#modal'),notice=document.querySelector('#notice');
 const roles={ADMIN:'管理员',UPLOADER:'上传者',READER:'阅读者'};
 const state={user:null,page:0,versionPage:0,search:'',view:'docs',doc:null,versions:[],users:[],load:0};
-let projects=[],taskRows=[],spinTimer=null;
+let projects=[],taskRows=[],companies=[],spinTimer=null;
 let noticeTimer;
 const button=(label,action,id='',cls='')=>`<button type="button" class="${cls}" data-action="${action}" data-id="${esc(id)}">${label}</button>`;
 const field=(label,name,value='',extra='')=>`<label>${label}<input name="${name}" value="${esc(value)}" ${extra}></label>`;
@@ -101,12 +101,15 @@ async function users(){
 async function tasks(companyId='',reportFormatId=''){
   state.view='tasks';state.doc=null;renderShell();if(state.user.must_change)return;
   const content=document.querySelector('#content');
-  content.innerHTML=`<div class="page-head"><div><p class="eyebrow">TASK PIPELINE</p><h1>任务配置</h1><p class="muted">按公司与报告格式维护执行类、顺序和扩展参数。</p></div>${button('＋ 新增任务','new-task','','primary')}</div><section class="panel"><div class="toolbar"><form data-form="task-search" class="search task-search"><input name="companyId" aria-label="公司 ID" placeholder="Company ID" value="${esc(companyId)}" required inputmode="numeric"><input name="reportFormatId" aria-label="报告格式 ID" placeholder="报告格式 ID（通用填 0）" value="${esc(reportFormatId)}" required inputmode="numeric"><button type="submit">查询</button></form>${button('刷新','tasks-refresh')}</div><div id="task-results" class="task-results"><div class="empty task-prompt"><div class="empty-icon">⚙</div><h2>输入公司 ID 和报告格式查看配置</h2><p>例如公司 2105259、报告格式 60。</p></div></div></section>`;
+  try{companies=await api('/companies');}catch(e){content.innerHTML=`<p class="error">公司列表加载失败：${esc(e.message)}</p>`;failure(e);return;}
+  const options=companies.map(c=>`<option value="${esc(c.id)}" ${String(c.id)===String(companyId)?'selected':''}>${esc(c.company_name)} · ${esc(c.id)}</option>`).join('');
+  content.innerHTML=`<div class="page-head"><div><p class="eyebrow">TASK PIPELINE</p><h1>任务配置</h1><p class="muted">按公司与报告格式维护执行类、顺序和扩展参数。</p></div>${button('＋ 新增任务','new-task','','primary')}</div><section class="panel"><div class="toolbar"><form data-form="task-search" class="search task-search"><select name="companyId" aria-label="公司" required>${options}</select><input name="reportFormatId" aria-label="报告格式 ID" placeholder="报告格式 ID（通用填 0）" value="${esc(reportFormatId)}" required inputmode="numeric"><button type="submit">查询</button></form>${button('刷新','tasks-refresh')}</div><div id="task-results" class="task-results"><div class="empty task-prompt"><div class="empty-icon">⚙</div><h2>选择公司和报告格式查看配置</h2><p>例如 Walmart Canada、Carter’s；格式 ID 按公司报告配置填写。</p></div></div></section>`;
   if(companyId&&reportFormatId!=='')await loadTasks(companyId,reportFormatId);
 }
-function reports(){
+async function reports(){
   state.view='reports';state.doc=null;renderShell();if(state.user.must_change)return;
-  document.querySelector('#content').innerHTML=reportsPage(state.user.role==='ADMIN');
+  const content=document.querySelector('#content');content.innerHTML='<p class="loading">正在加载公司…</p>';
+  try{companies=await api('/companies');content.innerHTML=reportsPage(companies,state.user.role==='ADMIN');}catch(e){content.innerHTML=`<section class="panel empty"><h2>公司列表加载失败</h2><p>${esc(e.message)}</p></section>`;failure(e);}
 }
 async function loadTasks(companyId,reportFormatId){
   const results=document.querySelector('#task-results');if(!results)return;
@@ -118,7 +121,8 @@ async function loadTasks(companyId,reportFormatId){
 function taskDialog(id=''){
   const t=id?taskRows.find(x=>same(x.id,id))||{}:{};
   const enabled=!([false,0,'0','false'].includes(t.enabled));
-  openDialog(id?'编辑任务配置':'新增任务配置',`<div class="grid-two">${field('Company ID','companyId',t.company_id||document.querySelector('[name="companyId"]')?.value||'','required min="1" type="number"')}${field('报告格式 ID','reportFormatId',t.report_format_id??document.querySelector('[name="reportFormatId"]')?.value??0,'required min="0" type="number"')}</div><div class="grid-two">${field('执行顺序 Order No','orderNo',t.order_no??0,'required min="0" type="number"')}${field('执行类名 Class Name','className',t.class_name||'','required maxlength="255" placeholder="例如 com.example.jobs.SyncTask"')}</div><label>其他字段（JSON 对象）<textarea name="otherFields" maxlength="60000" spellcheck="false" placeholder='{"retry":3,"timeout":60}'>${esc(t.other_fields||'{}')}</textarea><small>用 JSON 对象保存此类的扩展参数。</small></label><label class="task-enabled"><input type="checkbox" name="enabled" ${enabled?'checked':''}>启用此任务</label><label>备注<textarea name="remark" maxlength="500" placeholder="可选">${esc(t.remark||'')}</textarea></label>`,'task','保存配置');
+  const companyOptions=companies.map(c=>`<option value="${esc(c.id)}" ${String(c.id)===String(t.company_id||document.querySelector('[name="companyId"]')?.value||'')?'selected':''}>${esc(c.company_name)} · ${esc(c.id)}</option>`).join('');
+  openDialog(id?'编辑任务配置':'新增任务配置',`<div class="grid-two"><label>公司<select name="companyId" required>${companyOptions}</select></label>${field('报告格式 ID','reportFormatId',t.report_format_id??document.querySelector('[name="reportFormatId"]')?.value??0,'required min="0" type="number"')}</div><div class="grid-two">${field('执行顺序 Order No','orderNo',t.order_no??0,'required min="0" type="number"')}${field('执行类名 Class Name','className',t.class_name||'','required maxlength="255" placeholder="例如 com.example.jobs.SyncTask"')}</div><label>其他字段（JSON 对象）<textarea name="otherFields" maxlength="60000" spellcheck="false" placeholder='{"retry":3,"timeout":60}'>${esc(t.other_fields||'{}')}</textarea><small>用 JSON 对象保存此类的扩展参数。</small></label><label class="task-enabled"><input type="checkbox" name="enabled" ${enabled?'checked':''}>启用此任务</label><label>备注<textarea name="remark" maxlength="500" placeholder="可选">${esc(t.remark||'')}</textarea></label>`,'task','保存配置');
   const form=modal.querySelector('form');form.dataset.id=id;
 }
 function openDialog(title,body,form,submit='保存'){
