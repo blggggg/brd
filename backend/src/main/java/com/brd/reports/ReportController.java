@@ -1,4 +1,4 @@
-package com.brd.walmart;
+package com.brd.reports;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -9,11 +9,11 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/walmart")
-public class WalmartReportController {
-    private final WalmartReportService reports;
+@RequestMapping("/api/v1/reports")
+public class ReportController {
+    private final ReportService reports;
 
-    public WalmartReportController(WalmartReportService reports) {
+    public ReportController(ReportService reports) {
         this.reports = reports;
     }
 

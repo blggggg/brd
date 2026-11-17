@@ -2,7 +2,7 @@ import './login-motion.css';
 import {setupLoginMedia} from './login-media.js';
 import {api,upload,download} from './api.js';
 import {esc,same,code,canWrite,size,newUploadKey} from './helpers.js';
-import {walmartReportsPage,walmartPlanResult} from './walmart/reports.js';
+import {reportsPage,reportPlanResult} from './reports/reports.js';
 
 const root=document.querySelector('#app'),modal=document.querySelector('#modal'),notice=document.querySelector('#notice');
 const roles={ADMIN:'管理员',UPLOADER:'上传者',READER:'阅读者'};
@@ -106,7 +106,7 @@ async function tasks(companyId='',reportFormatId=''){
 }
 function reports(){
   state.view='reports';state.doc=null;renderShell();if(state.user.must_change)return;
-  document.querySelector('#content').innerHTML=walmartReportsPage(state.user.role==='ADMIN');
+  document.querySelector('#content').innerHTML=reportsPage(state.user.role==='ADMIN');
 }
 async function loadTasks(companyId,reportFormatId){
   const results=document.querySelector('#task-results');if(!results)return;
@@ -148,9 +148,9 @@ async function submit(f){
   if(type==='project-add'){const saved=await api('/projects','POST',{name:b.name.trim()});toast('已添加「'+saved.name+'」');await projectPicker();return;}
   if(type==='search'){state.search=b.search.trim();await docs(true);return;}
   if(type==='task-search'){if(!/^\d+$/.test(b.companyId.trim())||Number(b.companyId)<1)throw new Error('Company ID 必须是大于 0 的整数');if(!/^\d+$/.test(b.reportFormatId.trim()))throw new Error('报告格式 ID 必须是大于等于 0 的整数');await tasks(b.companyId.trim(),b.reportFormatId.trim());return;}
-  if(type==='walmart-plan'){
-    const plan=await api(`/walmart/report-plan?companyId=${encodeURIComponent(b.companyId)}&reportFormatId=${encodeURIComponent(b.reportFormatId)}&reportNo=${encodeURIComponent(b.reportNo.trim())}`);
-    document.querySelector('#walmart-plan').innerHTML=walmartPlanResult(plan);return;
+  if(type==='report-plan'){
+    const plan=await api(`/reports/report-plan?companyId=${encodeURIComponent(b.companyId)}&reportFormatId=${encodeURIComponent(b.reportFormatId)}&reportNo=${encodeURIComponent(b.reportNo.trim())}`);
+    document.querySelector('#report-plan').innerHTML=reportPlanResult(plan);return;
   }
   if(type==='password'){if(b.newPassword!==b.confirm)throw new Error('两次新密码不一致');await api('/auth/password','PUT',{oldPassword:b.oldPassword,newPassword:b.newPassword});modal.close();state.user=null;renderLogin('密码已更新，请使用新密码重新登录。');return;}
   if(type==='upload'){

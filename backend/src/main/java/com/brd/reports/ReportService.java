@@ -1,4 +1,4 @@
-package com.brd.walmart;
+package com.brd.reports;
 
 import com.brd.TaskMapper;
 import org.springframework.stereotype.Service;
@@ -6,12 +6,12 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Map;
 
-/** Walmart-specific report planning. Rendering remains delegated to the report engine. */
+/** Company-specific report planning. Rendering remains delegated to the report engine. */
 @Service
-public class WalmartReportService {
+public class ReportService {
     private final TaskMapper tasks;
 
-    public WalmartReportService(TaskMapper tasks) {
+    public ReportService(TaskMapper tasks) {
         this.tasks = tasks;
     }
 
@@ -25,7 +25,7 @@ public class WalmartReportService {
                 "reportNo", reportNo,
                 "engineReady", false,
                 "tasks", configured,
-                "reason", "BRD 已维护 Walmart 任务配置，但尚未接入 WMCA 报告引擎、Word 模板及报告业务数据 Mapper。"
+                "reason", "BRD 已维护该公司的任务配置，但尚未接入对应报告引擎、Word 模板及报告业务数据 Mapper。"
         );
     }
 
