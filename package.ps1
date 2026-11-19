@@ -1,12 +1,15 @@
 $ErrorActionPreference = 'Stop'
 $projectRoot = $PSScriptRoot
 $backendDir = Join-Path $projectRoot 'backend'
+$buildDir = Join-Path $backendDir 'target-deploy'
 $mavenHome = Join-Path $projectRoot 'apache-maven-3.9.11'
 $maven = Join-Path $mavenHome 'bin\mvn.cmd'
+$mavenRepository = Join-Path $projectRoot '.maven-repository'
 
 try {
     if (-not (Test-Path -LiteralPath $maven)) { throw "Maven not found: $maven" }
-    $javaHome = if ($env:JAVA_HOME -and (Test-Path -LiteralPath $env:JAVA_HOME)) { $env:JAVA_HOME } else { 'C:\Program Files\Java\jdk-17' }
+    $java17Home = 'C:\Program Files\Java\jdk-17'
+    $javaHome = if (Test-Path -LiteralPath $java17Home) { $java17Home } elseif ($env:JAVA_HOME -and (Test-Path -LiteralPath $env:JAVA_HOME)) { $env:JAVA_HOME } else { $java17Home }
     $javac = Join-Path $javaHome 'bin\javac.exe'
     $compilerVersion = if (Test-Path -LiteralPath $javac) { (& $javac -version 2>&1 | Out-String).Trim() } else { '' }
     if ($compilerVersion -notmatch '^javac (17|1[89]|[2-9][0-9])\.') {
@@ -21,11 +24,11 @@ try {
     $env:PATH = "$javaHome\bin;$mavenHome\bin;$env:PATH"
     Write-Host 'Building BRD frontend and backend...'
     Push-Location $backendDir
-    try { & $maven clean package '-DskipTests' } finally { Pop-Location }
+    try { & $maven "-Dmaven.repo.local=$mavenRepository" '-Premote-deploy' clean package '-DskipTests' } finally { Pop-Location }
     if ($LASTEXITCODE -ne 0) { throw "Build failed with exit code $LASTEXITCODE" }
 
     $jarName = 'brd-management-0.1.0.jar'
-    $jarPath = Join-Path $backendDir "target\$jarName"
+    $jarPath = Join-Path $buildDir $jarName
     if (-not (Test-Path -LiteralPath $jarPath)) { throw "JAR not found: $jarPath" }
 
     $localConfig = Join-Path $projectRoot 'deploy.local.ps1'
@@ -66,7 +69,7 @@ mv -f '$remoteTemp' '$remoteJar'
 nohup '$remoteDir/start.sh' >> '$remoteDir/brd-management.log' 2>&1 < /dev/null &
 echo `$! > '$remoteDir/brd-management.pid'
 for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
-  if curl -fsS http://127.0.0.1:8080/ -o /dev/null; then
+  if curl -fsS http://127.0.0.1:8080/api/v1/auth/csrf -o /dev/null; then
     echo "BRD HTTP ready; PID `$(cat '$remoteDir/brd-management.pid')"
     exit 0
   fi

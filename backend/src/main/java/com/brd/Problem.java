@@ -6,6 +6,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.CannotGetJdbcConnectionException;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 public class Problem extends RuntimeException {
     final int status; final String code;
@@ -14,6 +16,7 @@ public class Problem extends RuntimeException {
 
 @RestControllerAdvice
 class ProblemHandler {
+    private static final Log log = LogFactory.getLog(ProblemHandler.class);
     @ExceptionHandler(Problem.class)
     ResponseEntity<?> problem(Problem p){return ResponseEntity.status(p.status).body(Map.of("code",p.code,"message",p.getMessage()));}
     @ExceptionHandler(MaxUploadSizeExceededException.class)
@@ -23,5 +26,5 @@ class ProblemHandler {
     @ExceptionHandler(CannotGetJdbcConnectionException.class)
     ResponseEntity<?> databaseUnavailable(){return ResponseEntity.status(503).body(Map.of("code","PROJECT_DATABASE_UNAVAILABLE","message","项目数据库暂不可用，请联系管理员检查数据库连接权限"));}
     @ExceptionHandler(IllegalArgumentException.class)
-    ResponseEntity<?> input(){return ResponseEntity.badRequest().body(Map.of("code","INVALID_INPUT","message","请求参数格式错误"));}
+    ResponseEntity<?> input(IllegalArgumentException error){log.warn("Invalid request argument", error);return ResponseEntity.badRequest().body(Map.of("code","INVALID_INPUT","message","请求参数格式错误"));}
 }

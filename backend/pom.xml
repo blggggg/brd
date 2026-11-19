@@ -13,17 +13,10 @@
     <dependency><groupId>com.mysql</groupId><artifactId>mysql-connector-j</artifactId><scope>runtime</scope></dependency>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
   </dependencies>
-  <profiles><profile><id>windows</id><activation><os><family>Windows</family></os></activation><properties><npm.executable>npm.cmd</npm.executable></properties></profile></profiles>
   <build><plugins>
-    <plugin>
-      <groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId><version>3.5.0</version>
-      <configuration><workingDirectory>${project.basedir}/src/main/frontend</workingDirectory><executable>${npm.executable}</executable></configuration>
-      <executions>
-        <execution><id>frontend-install</id><phase>generate-resources</phase><goals><goal>exec</goal></goals><configuration><arguments><argument>ci</argument><argument>--registry=https://registry.npmjs.org</argument></arguments></configuration></execution>
-        <execution><id>frontend-test</id><phase>generate-resources</phase><goals><goal>exec</goal></goals><configuration><arguments><argument>test</argument></arguments></configuration></execution>
-        <execution><id>frontend-build</id><phase>generate-resources</phase><goals><goal>exec</goal></goals><configuration><arguments><argument>run</argument><argument>build</argument></arguments></configuration></execution>
-      </executions>
-    </plugin>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.8.1</version><configuration><release>${java.version}</release><parameters>true</parameters><compilerArgs><arg>-parameters</arg></compilerArgs></configuration></plugin>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>3.0.0</version></plugin>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-jar-plugin</artifactId><version>3.3.0</version></plugin>
     <plugin>
       <groupId>org.apache.maven.plugins</groupId><artifactId>maven-resources-plugin</artifactId>
       <executions><execution><id>bundle-frontend</id><phase>process-resources</phase><goals><goal>copy-resources</goal></goals><configuration>
@@ -33,4 +26,10 @@
     </plugin>
     <plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId></plugin>
   </plugins></build>
+  <profiles>
+    <profile>
+      <id>remote-deploy</id>
+      <build><directory>${project.basedir}/target-deploy</directory></build>
+    </profile>
+  </profiles>
 </project>

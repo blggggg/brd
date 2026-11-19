@@ -3,7 +3,9 @@
 !.env.example
 .idea/
 target/
+backend/target-deploy/
 apache-maven-*/
+.maven-repository/
 node_modules/
 dist/
 *.log

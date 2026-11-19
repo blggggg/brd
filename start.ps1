@@ -9,11 +9,19 @@ $brdBackend = Join-Path $PSScriptRoot 'backend'
 $brdJar = Join-Path $brdBackend 'target\brd-management-0.1.0.jar'
 $brdJava = if (Test-Path 'C:\Program Files\Java\jdk-17\bin\java.exe') { 'C:\Program Files\Java\jdk-17\bin\java.exe' } else { 'java' }
 $brdJavaHome = if (Test-Path 'C:\Program Files\Java\jdk-17') { 'C:\Program Files\Java\jdk-17' } else { $null }
-$brdMaven = 'C:\Users\毕浪\Documents\Codex\2026-10-10\cd-e-project-brd-management-backend\work\maven\apache-maven-3.9.9\bin\mvn.cmd'
+$brdMaven = Join-Path $PSScriptRoot 'apache-maven-3.9.11\bin\mvn.cmd'
 if (-not (Test-Path -LiteralPath $brdMaven)) {
     $mvnCommand = Get-Command mvn -ErrorAction SilentlyContinue
-    if (-not $mvnCommand) { throw 'Maven 3.6.3+ was not found. Install a supported Maven version before starting.' }
+    if (-not $mvnCommand) { throw 'Maven was not found in PATH.' }
     $brdMaven = $mvnCommand.Source
+}
+$brdMavenRepository = Join-Path $PSScriptRoot '.maven-repository'
+
+$portOwners = @(Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue |
+    Select-Object -ExpandProperty OwningProcess -Unique)
+if ($portOwners.Count -gt 0) {
+    $owners = $portOwners -join ', '
+    throw "Port $Port is already in use by process ID(s): $owners. Stop that process or run .\start.ps1 -Port 8092."
 }
 
 $frontend = Join-Path $brdBackend 'src\main\frontend'
@@ -29,7 +37,7 @@ $previousPath = $env:PATH
 if ($brdJavaHome) { $env:JAVA_HOME = $brdJavaHome; $env:PATH = "$brdJavaHome\bin;$env:PATH" }
 Push-Location $brdBackend
 try {
-    & $brdMaven -f pom.xml -DskipTests -Dexec.skip=true package
+    & $brdMaven "-Dmaven.repo.local=$brdMavenRepository" -f pom.xml '-DskipTests' clean package
     if ($LASTEXITCODE -ne 0) { throw "Backend package exited with code $LASTEXITCODE" }
 }
 finally { Pop-Location }
