@@ -5,6 +5,10 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$localSettings = Join-Path $PSScriptRoot 'local.settings.ps1'
+if (Test-Path -LiteralPath $localSettings) { . $localSettings }
+$localDatabasePassword = if ($script:BRD_LOCAL_DB_PASSWORD) { $script:BRD_LOCAL_DB_PASSWORD } else { $env:BRD_PROJECT_DB_PASSWORD }
+$localAdminPassword = if ($script:BRD_LOCAL_ADMIN_PASSWORD) { $script:BRD_LOCAL_ADMIN_PASSWORD } else { $env:BRD_ADMIN_PASSWORD }
 $brdBackend = Join-Path $PSScriptRoot 'backend'
 $brdJar = Join-Path $brdBackend 'target\brd-management-0.1.0.jar'
 $brdJava = if (Test-Path 'C:\Program Files\Java\jdk-17\bin\java.exe') { 'C:\Program Files\Java\jdk-17\bin\java.exe' } else { 'java' }
@@ -43,14 +47,18 @@ try {
 finally { Pop-Location }
 if (-not (Test-Path -LiteralPath $brdJar)) { throw 'The updated application JAR was not created.' }
 
-$securePassword = Read-Host "BVLDB MySQL password for $DatabaseUser" -AsSecureString
-if ($securePassword.Length -eq 0) { throw 'A non-empty BVLDB password is required.' }
-$passwordPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
-$plainPassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($passwordPointer)
-$secureAdminPassword = Read-Host 'Initial BRD admin password (ignored if an account already exists)' -AsSecureString
-if ($secureAdminPassword.Length -gt 0 -and $secureAdminPassword.Length -lt 12) { throw 'The initial BRD admin password must be at least 12 characters.' }
-$adminPasswordPointer = if ($secureAdminPassword.Length -gt 0) { [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureAdminPassword) } else { [IntPtr]::Zero }
-$plainAdminPassword = if ($adminPasswordPointer -ne [IntPtr]::Zero) { [Runtime.InteropServices.Marshal]::PtrToStringBSTR($adminPasswordPointer) } else { '' }
+if ([string]::IsNullOrWhiteSpace($localDatabasePassword)) {
+    $securePassword = Read-Host "BVLDB MySQL password for $DatabaseUser" -AsSecureString
+    if ($securePassword.Length -eq 0) { throw 'A non-empty BVLDB password is required.' }
+    $passwordPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
+    $localDatabasePassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($passwordPointer)
+}
+if ([string]::IsNullOrWhiteSpace($localAdminPassword)) {
+    $secureAdminPassword = Read-Host 'Initial BRD admin password (ignored if an account already exists)' -AsSecureString
+    if ($secureAdminPassword.Length -gt 0 -and $secureAdminPassword.Length -lt 12) { throw 'The initial BRD admin password must be at least 12 characters.' }
+    $adminPasswordPointer = if ($secureAdminPassword.Length -gt 0) { [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureAdminPassword) } else { [IntPtr]::Zero }
+    $localAdminPassword = if ($adminPasswordPointer -ne [IntPtr]::Zero) { [Runtime.InteropServices.Marshal]::PtrToStringBSTR($adminPasswordPointer) } else { '' }
+}
 
 $previousUrl = $env:BRD_PROJECT_DB_URL
 $previousUser = $env:BRD_PROJECT_DB_USER
@@ -62,8 +70,8 @@ Push-Location $brdBackend
 try {
     $env:BRD_PROJECT_DB_URL = $DatabaseUrl
     $env:BRD_PROJECT_DB_USER = $DatabaseUser
-    $env:BRD_PROJECT_DB_PASSWORD = $plainPassword
-    $env:BRD_ADMIN_PASSWORD = $plainAdminPassword
+    $env:BRD_PROJECT_DB_PASSWORD = $localDatabasePassword
+    $env:BRD_ADMIN_PASSWORD = $localAdminPassword
     $env:PORT = [string]$Port
     & $brdJava -jar $brdJar
     if ($LASTEXITCODE -ne 0) { throw "Application exited with code $LASTEXITCODE" }
@@ -77,8 +85,8 @@ finally {
     $env:PORT = $previousPort
     $env:JAVA_HOME = $previousJavaHome
     $env:PATH = $previousPath
-    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($passwordPointer)
+    if ($passwordPointer -ne [IntPtr]::Zero) { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($passwordPointer) }
     if ($adminPasswordPointer -ne [IntPtr]::Zero) { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($adminPasswordPointer) }
-    $plainPassword = $null
-    $plainAdminPassword = $null
+    $localDatabasePassword = $null
+    $localAdminPassword = $null
 }

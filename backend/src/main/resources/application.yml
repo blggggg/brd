@@ -10,8 +10,8 @@ server:
 spring:
   datasource:
     url: ${BRD_PROJECT_DB_URL:jdbc:mysql://8.137.166.134:3306/BVLDB?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai}
-    username: ${BRD_PROJECT_DB_USER:root}
-    password: ${BRD_PROJECT_DB_PASSWORD:}
+    username: root
+    password: Root@123
   servlet:
     multipart:
       max-file-size: 20MB

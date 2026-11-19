@@ -1,5 +1,6 @@
 package com.brd.reports;
 
+import com.brd.ReportGeneric;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.ContentDisposition;
@@ -17,11 +18,15 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/reports")
-public class ReportController {
+public class ReportController extends ReportGeneric {
     private final ReportService reports;
 
     public ReportController(ReportService reports) {
         this.reports = reports;
+    }
+
+    void runTasks(long companyId, int reportFormatId, String reportNo) {
+        reports.generateSimulated(companyId, reportFormatId, reportNo);
     }
 
     @GetMapping("/report-plan")
